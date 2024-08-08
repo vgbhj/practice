@@ -14,11 +14,11 @@ async def on_ready():
     Channel = client.get_channel(1257086733875417108)
     async for message in Channel.history(limit=200):
         content = message.content # get content
-        if content == "Нажми реакцию ✅ если манкрафтер!": # если сообщение уже есть -> просто цепляем проверку по id
+        if content == "@everyone Нажми реакцию ✅ чтобы попсать на манкрафт2.0": # если сообщение уже есть -> просто цепляем проверку по id
             print("Already exist")
             return;
         # else:   # пишем сообщение
-    Text= "Нажми реакцию ✅ если манкрафтер!"
+    Text= "@everyone Нажми реакцию ✅ чтобы попсать на манкрафт2.0"
     Moji = await Channel.send(Text)
     await Moji.add_reaction('✅')
 
