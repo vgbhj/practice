@@ -1,23 +1,25 @@
 # This example requires the 'message_content' intent.
 import discord
 import os
+from dotenv import load_dotenv
 
+load_dotenv("/home/miha/Documents/practice/mine_ds_bot/.env")
 intents = discord.Intents.default()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
 
-# @client.event
-# async def on_ready():
-#     Channel = client.get_channel(1257086733875417108)
-#     # async for message in Channel.history(limit=200):
-#     #     content = message.content # get content
-#     #     if content == "Нажми реакцию ✅ если манкрафтер!": # если сообщение уже есть -> просто цепляем проверку по id
-#     #         print("Already exist")
-#     #     else:   # пишем сообщение
-#     Text= "Нажми реакцию ✅ если манкрафтер!"
-#     Moji = await Channel.send(Text)
-#     await Moji.add_reaction('✅')
+@client.event
+async def on_ready():
+    Channel = client.get_channel(1257086733875417108)
+    async for message in Channel.history(limit=200):
+        content = message.content # get content
+        if content == "Нажми реакцию ✅ если манкрафтер!": # если сообщение уже есть -> просто цепляем проверку по id
+            print("Already exist")
+        else:   # пишем сообщение
+            Text= "Нажми реакцию ✅ если манкрафтер!"
+            Moji = await Channel.send(Text)
+            await Moji.add_reaction('✅')
 
 
 # for cache messages 
@@ -40,11 +42,14 @@ async def on_raw_reaction_add(payload):
 
     join_guild = await client.fetch_guild(payload.guild_id)
 
-    reaction = discord.utils.get(message.reactions, emoji="✅")
+    reaction = discord.utils.get(message.reactions)
     if payload.channel_id != 1257086733875417108:
         return
     if reaction.emoji == "✅":
-      await member.add_roles(join_guild.get_role(1257073125141778463))
+        print(reaction.emoji)
+        await member.add_roles(join_guild.get_role(1271063922383917086))
+    else:
+        await message.remove_reaction(reaction.emoji, member);
     
 client.run(os.getenv("TOKEN"))
 
