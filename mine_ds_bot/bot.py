@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv("/home/miha/Documents/practice/mine_ds_bot/.env")
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
@@ -16,10 +16,11 @@ async def on_ready():
         content = message.content # get content
         if content == "Нажми реакцию ✅ если манкрафтер!": # если сообщение уже есть -> просто цепляем проверку по id
             print("Already exist")
-        else:   # пишем сообщение
-            Text= "Нажми реакцию ✅ если манкрафтер!"
-            Moji = await Channel.send(Text)
-            await Moji.add_reaction('✅')
+            return;
+        # else:   # пишем сообщение
+    Text= "Нажми реакцию ✅ если манкрафтер!"
+    Moji = await Channel.send(Text)
+    await Moji.add_reaction('✅')
 
 
 # for cache messages 
@@ -42,14 +43,28 @@ async def on_raw_reaction_add(payload):
 
     join_guild = await client.fetch_guild(payload.guild_id)
 
-    reaction = discord.utils.get(message.reactions)
     if payload.channel_id != 1257086733875417108:
         return
-    if reaction.emoji == "✅":
-        print(reaction.emoji)
+    
+    if str(payload.emoji) == "✅":
         await member.add_roles(join_guild.get_role(1271063922383917086))
     else:
-        await message.remove_reaction(reaction.emoji, member);
+        await message.remove_reaction(payload.emoji, member);
+
+# remove role
+@client.event
+async def on_raw_reaction_remove(payload):
+    guild = await client.fetch_guild(payload.guild_id)
+    member = await guild.fetch_member(payload.user_id) 
+    join_guild = await client.fetch_guild(payload.guild_id)
+
+    if payload.channel_id != 1257086733875417108:
+        return
     
+
+    if str(payload.emoji) == "✅":
+        await member.remove_roles(join_guild.get_role(1271063922383917086))
+
+
 client.run(os.getenv("TOKEN"))
 
