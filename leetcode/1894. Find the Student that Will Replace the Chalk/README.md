@@ -1,0 +1,4 @@
+https://leetcode.com/problems/find-the-student-that-will-replace-the-chalk/description/?envType=daily-question&envId=2024-09-02
+
+![solv](solv.jpg)
+
