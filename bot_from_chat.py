@@ -121,7 +121,7 @@ def common_message(update, context):
 
 def main():
     storage = PicklePersistence(filepath="conversationbot")
-    updater = Updater(token=os.getenv("TOKEN"), persistence=storage, use_context=True)
+    updater = Updater(token=TOKEN, persistence=storage, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(MessageHandler(None, common_message))
