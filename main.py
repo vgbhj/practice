@@ -45,7 +45,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
+CHOOSING, ADMIN, TYPING_CHOICE = range(3)
 
 reply_keyboard = [
     ["Пройти тест", "Результаты"],
@@ -55,9 +55,16 @@ ans_keyboard = [
     ["Да", "Нет"],
 ]
 
+admin_keyboard = [
+    ["Список вопросов", "Список ответов", ],
+    ["Редактировать вопрос", "Редактировать ответ"],
+    ["Добавить вопрос"],
+]
+
 QUESTIONS = {}
 markup_reply = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 markup_ans = ReplyKeyboardMarkup(ans_keyboard, one_time_keyboard=True)
+markup_admin = ReplyKeyboardMarkup(admin_keyboard, one_time_keyboard=True)
 
 
 QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
@@ -118,8 +125,6 @@ async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show results for user"""
-    text = update.message.text.lower()
-    context.user_data["choice"] = text
     if 'quiz' not in context.user_data:
         reply_text = (
             "Нет данных. Вначале пройдите тест."
@@ -128,42 +133,15 @@ async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         reply_text = f"Ваш результат {context.user_data['quiz']['results']}."
 
 
-    await update.message.reply_text(reply_text)
+    await update.message.reply_text(reply_text, reply_markup=markup_reply)
 
     return CHOOSING
 
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    msg = update.message
+    await update.message.reply_text("Выберете действие", reply_markup=markup_admin)
 
-# async def custom_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-#     """Ask the user for a description of a custom category."""
-#     await update.message.reply_text(
-#         'Alright, please send me the category first, for example "Most impressive skill"'
-#     )
-
-#     return TYPING_CHOICE
-
-
-# async def received_information(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-#     """Store info provided by user and ask for the next category."""
-#     text = update.message.text
-#     category = context.user_data["choice"]
-#     context.user_data[category] = text.lower()
-#     del context.user_data["choice"]
-
-#     await update.message.reply_text(
-#         "Neat! Just so you know, this is what you already told me:"
-#         f"{facts_to_str(context.user_data)}"
-#         "You can tell me more, or change your opinion on something.",
-#         reply_markup=markup,
-#     )
-
-#     return CHOOSING
-
-
-# async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-#     """Display the gathered info."""
-#     await update.message.reply_text(
-#         f"This is what you already told me: {facts_to_str(context.user_data)}"
-#     )
+    return ADMIN
 
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -195,7 +173,30 @@ def main() -> None:
                 MessageHandler(
                     filters.Regex("^(Результаты)$"), results
                 ),
+                CommandHandler(
+                    "admin", admin_panel
+                ),
             ],
+            # ADMIN: [
+            #     MessageHandler(
+            #         filters.Regex("^(Список вопросов)$"), results
+            #     ),
+            #     MessageHandler(
+            #         filters.Regex("^(Список ответов)$"), results
+            #     ),
+            #     MessageHandler(
+            #         filters.Regex("^(Редактировать вопрос)$"), results
+            #     ),
+            #     MessageHandler(
+            #         filters.Regex("^(Редактировать ответ)$"), results
+            #     ),
+            #     MessageHandler(
+            #         filters.Regex("^(Редактировать ответ)$"), results
+            #     ),
+            #     MessageHandler(
+            #         filters.TEXT & ~(filters.COMMAND | filters.Regex("^Done$")), admin_panel
+            #     )
+            # ],
         },
         fallbacks=[MessageHandler(filters.Regex("^Done$"), done)],
         name="my_conversation",
