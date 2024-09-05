@@ -63,12 +63,14 @@ admin_keyboard = [
 ]
 
 QUESTIONS = {}
+ANSWERS = {}
 markup_reply = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 markup_ans = ReplyKeyboardMarkup(ans_keyboard, one_time_keyboard=True)
 markup_admin = ReplyKeyboardMarkup(admin_keyboard, one_time_keyboard=True)
 
 
 QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
 
 def facts_to_str(user_data: Dict[str, str]) -> str:
     """Helper function for formatting the gathered user info."""
@@ -93,34 +95,28 @@ async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = msg.from_user
     if (msg.text == "Пройти тест"):
         context.user_data['quiz'] = {}
-        context.user_data['quiz']['answers'] = 0
-        context.user_data['quiz']['results'] = 0
-        context.user_data['quiz']['yes'] = 0
-        context.user_data['quiz']['no'] = 0
+        context.user_data['quiz']['answers'] = ""
     elif (msg.text == "Да"):
-        context.user_data['quiz']['yes'] += 1
+        context.user_data['quiz']['answers'] += '1'
     elif (msg.text == "Нет"):
-        context.user_data['quiz']['no'] += 1
-
-    questions_left = len(QUESTIONS) - context.user_data['quiz']['answers']
+        context.user_data['quiz']['answers'] += '0'
 
     # Debug
     # print(questions_left)
     # print(context.user_data['quiz']['answers'])
     # print(msg.text)
 
-    if(questions_left < 1):
+    if (len(QUESTIONS) == len(context.user_data['quiz']['answers'])):
         reply_text = f"Тест завершен!"
-
         # Посчитать result
 
+        context.user_data['quiz']['results'] = context.user_data['quiz']['answers'] 
         await update.message.reply_text(reply_text, reply_markup=markup_reply)
     else:
-        reply_text = QUESTIONS[context.user_data['quiz']['answers']]['q']
+        reply_text = QUESTIONS[len(context.user_data['quiz']['answers'])]['q']
         await update.message.reply_text(reply_text, reply_markup=markup_ans)
 
     
-    context.user_data['quiz']['answers'] += 1
 
     return CHOOSING
 
