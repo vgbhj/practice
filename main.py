@@ -59,7 +59,7 @@ admin_keyboard = [
     ["Список вопросов", "Список ответов", ],
     ["Редактировать вопрос", "Редактировать ответ"],
     ["Добавить вопрос"], ["Удалить вопрос"],
-     ["Вернуться в меню"],
+    ["Вернуться в меню"],
 ]
 
 QUESTIONS = {}
@@ -143,7 +143,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         for i in QUESTIONS:
             reply_text += f"{i['id']} : {i['q']}\n"
     elif (msg.text == "Список ответов"):
-        pass
+        for i in ANSWERS:
+            human_read = "-".join('да' if x == '1' else 'нет' for x in i['code'])
+            reply_text += f"{i['id']}. ({human_read}): {i['ans']}\n"
     elif (msg.text == "Редактировать вопрос"):
         pass
     elif (msg.text == "Редактировать ответ"):
