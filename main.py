@@ -58,7 +58,8 @@ ans_keyboard = [
 admin_keyboard = [
     ["Список вопросов", "Список ответов", ],
     ["Редактировать вопрос", "Редактировать ответ"],
-    ["Добавить вопрос"],
+    ["Добавить вопрос"], ["Удалить вопрос"],
+     ["Вернуться в меню"],
 ]
 
 QUESTIONS = {}
@@ -139,7 +140,32 @@ async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     msg = update.message
-    await update.message.reply_text("Выберете действие", reply_markup=markup_admin)
+    
+    reply_text = ""
+
+    if (msg.text == "Список вопросов"):
+        for i in QUESTIONS:
+            reply_text += f"{i['id']} : {i['q']}\n"
+    elif (msg.text == "Список ответов"):
+        pass
+    elif (msg.text == "Редактировать вопрос"):
+        pass
+    elif (msg.text == "Редактировать ответ"):
+        pass
+    elif (msg.text == "Добавить вопрос"):
+        pass
+    elif (msg.text == "Удалить вопрос"):
+        pass
+    elif (msg.text == "Вернуться в меню"):
+        reply_text = f"Можете пройти тест или посмотреть результаты."
+        
+        await update.message.reply_text(reply_text, reply_markup=markup_reply)
+
+        return CHOOSING
+    else:
+        reply_text = "Выберете действие"
+
+    await update.message.reply_text(reply_text, reply_markup=markup_admin)
 
     return ADMIN
 
@@ -164,7 +190,7 @@ def main() -> None:
 
     # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", start), CommandHandler("admin", admin_panel),],
         states={
             CHOOSING: [
                 MessageHandler(
@@ -177,26 +203,29 @@ def main() -> None:
                     "admin", admin_panel
                 ),
             ],
-            # ADMIN: [
-            #     MessageHandler(
-            #         filters.Regex("^(Список вопросов)$"), results
-            #     ),
-            #     MessageHandler(
-            #         filters.Regex("^(Список ответов)$"), results
-            #     ),
-            #     MessageHandler(
-            #         filters.Regex("^(Редактировать вопрос)$"), results
-            #     ),
-            #     MessageHandler(
-            #         filters.Regex("^(Редактировать ответ)$"), results
-            #     ),
-            #     MessageHandler(
-            #         filters.Regex("^(Редактировать ответ)$"), results
-            #     ),
-            #     MessageHandler(
-            #         filters.TEXT & ~(filters.COMMAND | filters.Regex("^Done$")), admin_panel
-            #     )
-            # ],
+            ADMIN: [
+                MessageHandler(
+                    filters.Regex("^(Список вопросов)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Список ответов)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Редактировать вопрос)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Редактировать ответ)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Добавить вопрос)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Удалить вопрос)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Вернуться в меню)$"), admin_panel
+                ),
+            ],
         },
         fallbacks=[MessageHandler(filters.Regex("^Done$"), done)],
         name="my_conversation",
