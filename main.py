@@ -48,7 +48,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-CHOOSING, ADMIN, TYPING_CHOICE = range(3)
+CHOOSING, ADMIN, EDIT = range(3)
 
 reply_keyboard = [
     ["Пройти тест", "Результаты"],
@@ -267,13 +267,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     msg = update.message
     
     reply_text = ""
-    edit = ""
-    edit_id = -1
-    if 'edit' in context.user_data:
-        edit = context.user_data['edit']
-    
-    if 'edit_id' in context.user_data:
-        edit_id = context.user_data['edit_id']
     
 
     if (msg.text == "Список вопросов"):
@@ -290,10 +283,18 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
          reply_text = "Введите номер вопроса"
 
+         await update.message.reply_text(reply_text)
+         
+         return EDIT
+
     elif (msg.text == "Редактировать ответ"):
          context.user_data['edit'] = 'answer'
 
          reply_text = "Введите номер ответа"
+
+         await update.message.reply_text(reply_text)
+         
+         return EDIT
 
     elif (msg.text == "Добавить вопрос"):
         pass
@@ -308,26 +309,72 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     else:
         reply_text = "Выберете действие"
 
+
+    await update.message.reply_text(reply_text, reply_markup=markup_admin)
+
+    return ADMIN
+
+async def edit_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    msg = update.message
+    
+    reply_text = ""
+
+    edit = ""
+    if 'edit' in context.user_data:
+        edit = context.user_data['edit']
+
     if edit:
         if msg.text.isdigit():
             id = int(msg.text) - 1
-            print(id , len(QUESTIONS), len(ANSWERS))
             if edit == 'question':
                 if id >= 0 and id < len(QUESTIONS):
                     context.user_data['edit_id'] = id
+                    reply_text = "Введите вопрос"
+                    await update.message.reply_text(reply_text)
+                    return EDIT
                 else:
                     reply_text = "Неверный номер!"
             if edit == 'answer':
                 if id >= 0 and id < len(ANSWERS):
                     context.user_data['edit_id'] = id
+                    reply_text = "Введите ответ"
+                    await update.message.reply_text(reply_text)
+                    return EDIT
                 else:
                     reply_text = "Неверный номер!"
+
+    
+    await update.message.reply_text(reply_text, reply_markup=markup_admin)
+
+    return ADMIN
+
+async def edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    msg = update.message
+    
+    reply_text = "Edited"
+
+    edit = ""
+    edit_id = -1
+    if 'edit' in context.user_data:
+        edit = context.user_data['edit']
+    
+    if 'edit_id' in context.user_data:
+        edit_id = context.user_data['edit_id']
     
     if edit_id != -1:
+        if edit == 'question':
+            QUESTIONS[edit_id]['q'] = msg.text
+            with open("questions.yaml", 'w') as file:
+                yaml.dump(QUESTIONS, file, default_flow_style=False, allow_unicode=True)
+        if edit == 'answer':
+            ANSWERS[edit_id]['ans'] = msg.text
+            with open("answers.yaml", 'w') as file:
+                yaml.dump(ANSWERS, file, default_flow_style=False, allow_unicode=True)
         context.user_data['edit'] = None
         context.user_data['edit_id'] = None
-
-
+    else:
+        reply_text = "Something went wrong!"
+    
     await update.message.reply_text(reply_text, reply_markup=markup_admin)
 
     return ADMIN
@@ -391,8 +438,13 @@ def main() -> None:
                 MessageHandler(
                     filters.Regex("^(Вернуться в меню)$"), admin_panel
                 ),
+            ],
+            EDIT:[
                 MessageHandler(
-                    filters.Regex("^[0-9]*$"), admin_panel
+                    filters.Regex("^[0-9]*$"), edit_id
+                ),
+                MessageHandler(
+                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^Done$")), edit_text
                 ),
             ],
         },
