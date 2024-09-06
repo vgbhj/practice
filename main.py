@@ -248,6 +248,8 @@ async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show results for user"""
+
+    ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
     reply_text = "Something went wrong"
     if 'quiz' not in context.user_data:
         reply_text = (

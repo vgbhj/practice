@@ -1,12 +1,24 @@
-- ans: Ответ 1
-  code: '11'
+- ans: HOROSHO
+  code: '111'
   id: 1
 - ans: Ответ 2
-  code: '10'
+  code: '110'
   id: 2
 - ans: Ответ 3
-  code: '01'
+  code: '101'
   id: 3
 - ans: Ответ 4
-  code: '00'
+  code: '100'
   id: 4
+- ans: Ответ 5
+  code: '011'
+  id: 5
+- ans: Ответ 6
+  code: '010'
+  id: 6
+- ans: Ответ 7
+  code: '001'
+  id: 7
+- ans: Ответ 8
+  code: '000'
+  id: 8
