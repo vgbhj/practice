@@ -48,7 +48,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-CHOOSING, ADMIN, EDIT = range(3)
+CHOOSING, ADMIN, EDIT, ADD, REMOVE = range(5)
 
 reply_keyboard = [
     ["Пройти тест", "Результаты"],
@@ -65,8 +65,8 @@ admin_keyboard = [
     ["Добавить чат"], ["Вернуться в меню"],
 ]
 
-QUESTIONS = {}
-ANSWERS = {}
+global QUESTIONS
+global ANSWERS
 markup_reply = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 markup_ans = ReplyKeyboardMarkup(ans_keyboard, one_time_keyboard=True)
 markup_admin = ReplyKeyboardMarkup(admin_keyboard, one_time_keyboard=True)
@@ -216,7 +216,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """General response handler"""
 
-
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
     msg = update.message
     user = msg.from_user
     if (msg.text == "Пройти тест"):
@@ -248,12 +248,15 @@ async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show results for user"""
+    reply_text = "Something went wrong"
     if 'quiz' not in context.user_data:
         reply_text = (
             "Нет данных. Вначале пройдите тест."
         )
     else:
-        reply_text = f"Ваш результат {context.user_data['quiz']['results']}."
+        for i in ANSWERS:
+            if i['code'] == context.user_data['quiz']['results']:
+                reply_text = f"Ваш результат {i['ans']}."
 
 
     await update.message.reply_text(reply_text, reply_markup=markup_reply)
@@ -263,6 +266,11 @@ async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.effective_user.username not in ADMINS:
         return
+
+    
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+    ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
+    ALLOWED_GROUP_ID = yaml.load(Path('groups.yaml').read_text(), Loader=yaml.SafeLoader)
     
     msg = update.message
     
@@ -274,9 +282,10 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             reply_text += f"{i['id']} : {i['q']}\n"
 
     elif (msg.text == "Список ответов"):
-        for i in ANSWERS:
-            human_read = "-".join('да' if x == '1' else 'нет' for x in i['code'])
-            reply_text += f"{i['id']}. ({human_read}): {i['ans']}\n"
+        if ANSWERS:
+            for i in ANSWERS:
+                human_read = "-".join('да' if x == '1' else 'нет' for x in i['code'])
+                reply_text += f"{i['id']}. ({human_read}): {i['ans']}\n"
 
     elif (msg.text == "Редактировать вопрос"):
          context.user_data['edit'] = 'question'
@@ -297,9 +306,26 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
          return EDIT
 
     elif (msg.text == "Добавить вопрос"):
-        pass
+        context.user_data['add'] = 'question'
+
+        reply_text = "Введите вопрос"
+
+        await update.message.reply_text(reply_text)
+        return ADD
     elif (msg.text == "Удалить вопрос"):
-        pass
+        context.user_data['remove'] = 'question'
+
+        reply_text = "Введите номер вопроса"
+
+        await update.message.reply_text(reply_text)
+        return REMOVE
+    elif (msg.text == "Добавить чат"):
+        context.user_data['add'] = 'chat'
+
+        reply_text = "Введите id чата"
+
+        await update.message.reply_text(reply_text)
+        return ADD
     elif (msg.text == "Вернуться в меню"):
         reply_text = f"Можете пройти тест или посмотреть результаты."
         
@@ -309,6 +335,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     else:
         reply_text = "Выберете действие"
 
+    if reply_text == "":
+        reply_text = "Пусто"
 
     await update.message.reply_text(reply_text, reply_markup=markup_admin)
 
@@ -317,6 +345,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def edit_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     msg = update.message
     
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+    ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
     reply_text = ""
 
     edit = ""
@@ -352,6 +382,8 @@ async def edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     msg = update.message
     
     reply_text = "Edited"
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+    ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
 
     edit = ""
     edit_id = -1
@@ -379,6 +411,91 @@ async def edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     return ADMIN
 
+def update_answers():
+
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+    ANSWERS = yaml.load(Path('answers.yaml').read_text(), Loader=yaml.SafeLoader)
+    ANSWERS = []
+    n = 2**len(QUESTIONS)
+    for i in range(2**len(QUESTIONS)):
+        n -= 1
+        bin_n = str(bin(n)[2:])
+        tmp_dict = {'ans' : f"Ответ {i+1}", 'code' : '0'*(len(QUESTIONS)-len(bin_n)) + bin_n, 'id': i+1}
+        ANSWERS.append(tmp_dict)
+        with open("answers.yaml", 'w') as file:
+            yaml.dump(ANSWERS, file, default_flow_style=False, allow_unicode=True)
+
+
+async def add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    msg = update.message
+
+
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+
+    reply_text = "Added"
+    add = ""
+
+    if 'add' in context.user_data:
+        add = context.user_data['add']
+
+    if add:
+        if add == 'question':
+            QUESTIONS.append({'id' : len(QUESTIONS)+1, 'q' : msg.text})
+            with open("questions.yaml", 'w') as file:
+                yaml.dump(QUESTIONS, file, default_flow_style=False, allow_unicode=True)
+
+            update_answers()
+        if add == 'chat':
+            if msg.text[1:].isdigit():
+                ALLOWED_GROUP_ID.append(int(msg.text))
+                with open("groups.yaml", 'w') as file:
+                    yaml.dump(ALLOWED_GROUP_ID, file, default_flow_style=False, allow_unicode=True)
+            else:
+                reply_text = "Неверный номер!"
+
+
+    await update.message.reply_text(reply_text, reply_markup=markup_admin)
+
+    return ADMIN
+
+
+async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    msg = update.message
+    reply_text = "Deleted"
+    remove = "Something went wrong!"
+    
+    QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+
+    if 'remove' in context.user_data:
+        remove = context.user_data['remove']
+    
+    if remove:
+        if msg.text.isdigit():
+            id = int(msg.text) - 1
+            if remove == 'question':
+                if id >= 0 and id < len(QUESTIONS):
+                    tmp_q = []
+
+                    for i in range(len(QUESTIONS)):
+                        if i != id:
+                            QUESTIONS[i]['id'] = i+1
+                            tmp_q.append(QUESTIONS[i])
+
+                    QUESTIONS = tmp_q
+                    with open("questions.yaml", 'w') as file:
+                        yaml.dump(QUESTIONS, file, default_flow_style=False, allow_unicode=True)
+
+                    update_answers()
+                else:
+                    reply_text = "Неверный номер!"
+            
+        else:
+            reply_text = "Неверный номер!"
+
+
+    await update.message.reply_text(reply_text, reply_markup=markup_admin)
+
+    return ADMIN
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Display the gathered info and end the conversation."""
@@ -445,6 +562,19 @@ def main() -> None:
                 ),
                 MessageHandler(
                     filters.TEXT & ~(filters.COMMAND | filters.Regex("^Done$")), edit_text
+                ),
+            ],
+            ADD:[
+                MessageHandler(
+                    filters.Regex("^[0-9]*$"), add
+                ),
+                MessageHandler(
+                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^Done$")), add
+                ),
+            ],
+            REMOVE:[
+                MessageHandler(
+                    filters.Regex("^[0-9]*$"), remove
                 ),
             ],
         },
