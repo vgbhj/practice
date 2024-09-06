@@ -477,12 +477,13 @@ async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             if remove == 'question':
                 if id >= 0 and id < len(QUESTIONS):
                     tmp_q = []
-
                     for i in range(len(QUESTIONS)):
                         if i != id:
                             QUESTIONS[i]['id'] = i+1
                             tmp_q.append(QUESTIONS[i])
-
+                    
+                    for i in range(len(tmp_q)):
+                        tmp_q[i]['id'] = i+1
                     QUESTIONS = tmp_q
                     with open("questions.yaml", 'w') as file:
                         yaml.dump(QUESTIONS, file, default_flow_style=False, allow_unicode=True)
