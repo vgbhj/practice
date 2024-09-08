@@ -30,6 +30,7 @@ from telegram.ext import (
     ChatMemberHandler,
     filters,
 )
+from telegram.error import BadRequest, TelegramError
 
 from pathlib import Path
 import yaml  # pyyaml
@@ -62,7 +63,8 @@ admin_keyboard = [
     ["Список вопросов", "Список ответов", ],
     ["Редактировать вопрос", "Редактировать ответ"],
     ["Добавить вопрос"], ["Удалить вопрос"],
-    ["Добавить чат"], ["Вернуться в меню"],
+    ["Добавить чат"], ["Добавить канал"],
+    ["Вернуться в меню"]
 ]
 
 global QUESTIONS
@@ -198,11 +200,28 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start the conversation, display any stored data and ask user for input."""
 
+    CHANNELS = yaml.load(Path('channels.yaml').read_text(), Loader=yaml.SafeLoader)
     user_id = update.effective_user.id
-    group_members = context.bot_data.get('group_members', set())
+    group_members = context.bot_data.get('group_members', set()) 
+    flag = False
     
+    if CHANNELS:
+        for i in CHANNELS:
+            try:
+                chat_member = await context.bot.get_chat_member(chat_id=i, user_id=user_id)
+                status = chat_member.status
+
+                if status in ['member', 'administrator', 'creator']:
+                    flag = True
+
+            except BadRequest as e:
+                # Handle when the member list is inaccessible (bot is not admin)
+                print("The bot cannot access the member list of this channel. "
+                                                "Make sure it has the required permissions.")
+   
+
     # Check if the user is tracked as a group member
-    if user_id in group_members:
+    if user_id in group_members or flag:
         reply_text = f"Можете пройти тест или посмотреть результаты."
     
         await update.message.reply_text(reply_text, reply_markup=markup_reply)
@@ -328,6 +347,13 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
         await update.message.reply_text(reply_text)
         return ADD
+    elif (msg.text == "Добавить канал"):
+        context.user_data['add'] = 'channel'
+
+        reply_text = "Введите @channelname канала"
+
+        await update.message.reply_text(reply_text)
+        return ADD
     elif (msg.text == "Вернуться в меню"):
         reply_text = f"Можете пройти тест или посмотреть результаты."
         
@@ -433,6 +459,7 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
     QUESTIONS = yaml.load(Path('questions.yaml').read_text(), Loader=yaml.SafeLoader)
+    CHANNELS = yaml.load(Path('channels.yaml').read_text(), Loader=yaml.SafeLoader)
 
     reply_text = "Added"
     add = ""
@@ -454,6 +481,12 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                     yaml.dump(ALLOWED_GROUP_ID, file, default_flow_style=False, allow_unicode=True)
             else:
                 reply_text = "Неверный номер!"
+        if add == 'channel':
+            if CHANNELS == None:
+                CHANNELS = []
+            CHANNELS.append(msg.text)
+            with open("channels.yaml", 'w') as file:
+                yaml.dump(CHANNELS, file, default_flow_style=False, allow_unicode=True)
 
 
     await update.message.reply_text(reply_text, reply_markup=markup_admin)
@@ -554,6 +587,9 @@ def main() -> None:
                 ),
                 MessageHandler(
                     filters.Regex("^(Добавить чат)$"), admin_panel
+                ),
+                MessageHandler(
+                    filters.Regex("^(Добавить канал)$"), admin_panel
                 ),
                 MessageHandler(
                     filters.Regex("^(Вернуться в меню)$"), admin_panel
