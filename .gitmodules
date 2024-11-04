@@ -1,0 +1,3 @@
+[submodule "Getting started with multi-module workspaces/workspace/example"]
+	path = Getting started with multi-module workspaces/workspace/example
+	url = https://go.googlesource.com/example
