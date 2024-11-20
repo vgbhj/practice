@@ -14,12 +14,12 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := p.Title + ".txt"
+	filename := "data/" + p.Title + ".txt"
 	return os.WriteFile(filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+	filename := "data/" + title + ".txt"
 	body, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -55,9 +55,21 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
-var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
+}
+
+var templates = template.Must(template.ParseFiles("tmpl/edit.html", "tmpl/view.html"))
+var linkPattern = regexp.MustCompile(`\[(\w+)\]`)
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	bodyWithLinks := linkPattern.ReplaceAllFunc(p.Body, func(match []byte) []byte {
+		pageName := string(linkPattern.FindSubmatch(match)[1])
+		return []byte("<a href=\"/view/" + pageName + "\">" + pageName + "</a>")
+
+	})
+	p.Body = bodyWithLinks
+
 	err := templates.ExecuteTemplate(w, tmpl+".html", p)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -78,6 +90,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 }
 
 func main() {
+	fs := http.FileServer(http.Dir("tmpl/static/"))
+	http.Handle("tmpl/static/", http.StripPrefix("tmpl/static/", fs)) // Раздача файлов статики
+
+	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
